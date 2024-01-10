@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Card from "./Card";
 
 const DeckOfCards = () => {
   const [deck, setDeck] = useState(null);
   const [card, setCard] = useState(null);
+  const [toggle, setToggle] = useState(false);
+  const isFirstRender = useRef(true);
+  const interval = useRef();
 
   useEffect(() => {
     async function getDeck() {
@@ -22,7 +25,11 @@ const DeckOfCards = () => {
   }, []);
 
   const nextCard = async () => {
-    console.log(deck.remaining);
+    if (!deck) {
+      console.error("Deck is null");
+      return;
+    }
+    // console.log(deck.remaining);
     console.log(deck.deck_id);
     if (deck && deck.remaining < 1) {
       alert("Error, no cards remaining on the deck");
@@ -41,7 +48,20 @@ const DeckOfCards = () => {
     }
   };
 
-  const shuffle = async () => {
+  useEffect(() => {
+    if (!isFirstRender.current) {
+      if (toggle) {
+        interval.current = setInterval(() => {
+          nextCard();
+        }, 1000);
+        return () => clearInterval(interval.current);
+      }
+    } else {
+      isFirstRender.current = false; // Update the flag after first render
+    }
+  }, [toggle]);
+
+  async function shuffle() {
     if (deck && deck.deck_id) {
       try {
         const res = await axios.get(
@@ -53,11 +73,15 @@ const DeckOfCards = () => {
         console.error("Error shuffling deck", error);
       }
     }
+  }
+  const handleToggle = () => {
+    setToggle(!toggle);
   };
 
   return (
     <div>
       <p>Deck ID: {deck ? deck.deck_id : null}</p>
+      <button onClick={handleToggle}>{toggle ? "stop" : "start"}</button>
       <button onClick={nextCard}>Draw a Card</button>
       {card && <Card card={card} shuffle={shuffle} />}
     </div>
